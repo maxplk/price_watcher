@@ -13,17 +13,17 @@
     "default_popup": "popup.html",
     "default_title": "Price Watcher"
   },
-"content_scripts": [
-  {
-    "matches": [
-      "*://*.staples.ca/*",
-      "*://*.amazon.ca/*",
-      "*://*.bestbuy.ca/*"
-    ],
-    "js": ["content.js"],
-    "all_frames": true
-  }
-],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.staples.ca/*",
+        "*://*.amazon.ca/*",
+        "*://*.bestbuy.ca/*"
+      ],
+      "js": ["content.js"],
+      "all_frames": true
+    }
+  ],
   "background": {
     "service_worker": "background.js"
   },

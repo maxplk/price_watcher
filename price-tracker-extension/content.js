@@ -2,44 +2,42 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'getProductData') {
     const MAX_RETRIES = 10;
     const INTERVAL_MS = 300;
-
     let attempts = 0;
 
     function tryExtractSchema() {
       const scriptTags = document.querySelectorAll('script[type="application/ld+json"]');
-
       for (const tag of scriptTags) {
         try {
           const json = JSON.parse(tag.textContent);
 
           if (json['@type'] === 'Product') {
+            patchPrice(json);
             sendResponse({ success: true, json });
             return;
           }
 
-          // Sometimes it's an array with a Product entry inside
           if (Array.isArray(json)) {
             const product = json.find(item => item['@type'] === 'Product');
             if (product) {
+              patchPrice(product);
               sendResponse({ success: true, json: product });
               return;
             }
           }
 
-          // Sometimes wrapped in "@graph"
           if (json['@graph']) {
             const product = json['@graph'].find(item => item['@type'] === 'Product');
             if (product) {
+              patchPrice(product);
               sendResponse({ success: true, json: product });
               return;
             }
           }
         } catch (e) {
-          // Ignore JSON parse errors
+          // ignore JSON parse errors
         }
       }
 
-      // Retry until max attempts
       if (++attempts < MAX_RETRIES) {
         setTimeout(tryExtractSchema, INTERVAL_MS);
       } else {
@@ -47,7 +45,44 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     }
 
+    function patchPrice(json) {
+      // Updated selectors with your discovered BestBuy.ca price containers
+      const priceSelectors = [
+        '.priceContainer_1fy5J',
+        '.productPricingContainer_3gTS3',
+        '.priceView-customer-price > span',
+        '.priceView-hero-price > span',
+        '[data-testid="priceblock"]',
+        'div[data-automation="price"] > span',
+        '.pricing-price > span',
+      ];
+
+      let priceText = null;
+      for (const selector of priceSelectors) {
+        const el = document.querySelector(selector);
+        if (el && el.offsetParent !== null) {  // visible check
+          const match = el.textContent.match(/\$\d+(?:\.\d{2})?/);
+          if (match) {
+            priceText = match[0];
+            break;
+          }
+        }
+      }
+
+      if (priceText) {
+        const priceNum = parseFloat(priceText.replace(/[^0-9.]/g, ''));
+        if (!isNaN(priceNum) && json.offers) {
+          if (json.offers['@type'] === 'AggregateOffer' && (!json.offers.lowPrice || json.offers.lowPrice === 0)) {
+            json.offers.lowPrice = priceNum;
+            json.offers.highPrice = priceNum;
+          } else if (json.offers['@type'] === 'Offer' && (!json.offers.price || json.offers.price === 0)) {
+            json.offers.price = priceNum;
+          }
+        }
+      }
+    }
+
     tryExtractSchema();
-    return true; // keep the response channel open
+    return true; // keep the message channel open for async response
   }
 });
