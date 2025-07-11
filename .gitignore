@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.log
+*.sqlite3
+*.db
+*.egg-info/
+*.env
+.env
+.venv/
+
+# VSCode and IDEs
+.vscode/
+.idea/
+
+# System
+.DS_Store
+Thumbs.db
+
+# Chrome extension build artifacts (if added later)
+*.zip

@@ -23,6 +23,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  async function sendToServer(productJson) {
+    try {
+      const response = await fetch('http://127.0.0.1:8000/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productJson),
+      });
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.statusText}`);
+      }
+      return await response.json();
+    } catch (e) {
+      throw e;
+    }
+  }
+
   document.getElementById('saveFullPageBtn').addEventListener('click', async () => {
     try {
       const response = await sendGetProductData();
@@ -63,6 +79,38 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {
       document.getElementById('preview').textContent = '';
       document.getElementById('status').textContent = '❌ ' + e.message;
+      console.error(e);
+    }
+  });
+
+  // NEW: Send to Server button handler
+  document.getElementById('sendToServerBtn').addEventListener('click', async () => {
+    const statusEl = document.getElementById('status');
+    const previewEl = document.getElementById('preview');
+
+    statusEl.textContent = '⏳ Sending data to server...';
+    previewEl.textContent = '';
+
+    try {
+      const response = await sendGetProductData();
+
+      if (!response.success) {
+        statusEl.textContent = '❌ Error: ' + response.error;
+        return;
+      }
+
+      const serverResponse = await sendToServer(response.json);
+
+      if (serverResponse.extracted) {
+        previewEl.textContent = JSON.stringify(serverResponse.extracted, null, 2);
+        statusEl.textContent = '✅ Server returned product name and price';
+      } else if (serverResponse.error) {
+        statusEl.textContent = '❌ Server error: ' + serverResponse.error;
+      } else {
+        statusEl.textContent = '❌ Unexpected server response';
+      }
+    } catch (e) {
+      statusEl.textContent = '❌ ' + e.message;
       console.error(e);
     }
   });
